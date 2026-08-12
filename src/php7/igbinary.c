@@ -3171,7 +3171,11 @@ zend_always_inline static int igbinary_unserialize_object(struct igbinary_unseri
 		zval user_func;
 		zval retval;
 		zval args[1];
+#if PHP_VERSION_ID >= 80600
+		zend_string *user_func_name;
+#else
 		const char* user_func_name;
+#endif
 
 		/* Try to find class directly */
 		if (EXPECTED((ce = zend_lookup_class(class_name)) != NULL)) {
@@ -3181,14 +3185,22 @@ zend_always_inline static int igbinary_unserialize_object(struct igbinary_unseri
 
 		user_func_name = PG(unserialize_callback_func);
 		/* Check for unserialize callback */
+#if PHP_VERSION_ID >= 80600
+		if ((user_func_name == NULL) || (ZSTR_LEN(user_func_name) == 0)) {
+#else
 		if ((user_func_name == NULL) || (user_func_name[0] == '\0')) {
+#endif
 			incomplete_class = 1;
 			ce = PHP_IC_ENTRY;
 			break;
 		}
 
 		/* Call unserialize callback */
+#if PHP_VERSION_ID >= 80600
+		ZVAL_STR(&user_func, zend_string_dup(user_func_name, false));
+#else
 		ZVAL_STRING(&user_func, user_func_name);
+#endif
 		ZVAL_STR(&args[0], class_name);
 		if (call_user_function(CG(function_table), NULL, &user_func, &retval, 1, args) != SUCCESS) {
 			php_error_docref(NULL, E_WARNING, "defined (%s) but not found", Z_STRVAL(user_func));
@@ -3199,21 +3211,24 @@ zend_always_inline static int igbinary_unserialize_object(struct igbinary_unseri
 		}
 		/* FIXME: always safe? */
 		zval_ptr_dtor(&retval);
-		zval_ptr_dtor_str(&user_func);
 
 		/* User function call may have raised an exception */
 		if (EG(exception)) {
 			zend_string_release_ex(class_name, 0);
+			zval_ptr_dtor_str(&user_func);
 			return 1;
 		}
 
 		/* The callback function may have defined the class */
 		ce = zend_lookup_class(class_name);
 		if (!ce) {
-			php_error_docref(NULL, E_WARNING, "Function %s() hasn't defined the class it was called for", PG(unserialize_callback_func));
+			/* Keep using our own copy of the name: the callback may have
+			 * changed unserialize_callback_func, releasing the ini string */
+			php_error_docref(NULL, E_WARNING, "Function %s() hasn't defined the class it was called for", Z_STRVAL(user_func));
 			incomplete_class = true;
 			ce = PHP_IC_ENTRY;
 		}
+		zval_ptr_dtor_str(&user_func);
 	} while (0);
 
 	if (IGBINARY_IS_NOT_UNSERIALIZABLE(ce)) {
