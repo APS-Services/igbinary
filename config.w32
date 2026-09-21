@@ -8,9 +8,21 @@ if (PHP_IGBINARY == "yes") {
   // php 8.x also uses src/php7
   var is_php7_or_newer = !is_php5 && null != dll.match(/^php[78]/)
 
-  if (CHECK_HEADER_ADD_INCLUDE("apc_serializer.h", "CFLAGS_IGBINARY", "..\\pecl\\apcu;ext\\apcu")) {
+  // A phpize build has no php-src tree next to it. php-windows-builder installs
+  // the headers of every extension this composer.json requires into the devel
+  // pack, under <PHP_DIR>\include\ext\<name>, which none of the relative paths
+  // below reach: search_paths resolves them against the build directory, and
+  // php_usual_include_suspects is only the deps directory. PHP_DIR is set in
+  // MODE_PHPIZE; an in-tree build keeps exactly the original paths.
+  var igbinary_apcu_paths = "..\\pecl\\apcu;ext\\apcu";
+  var igbinary_apcu_ext_paths = "ext\\apcu";
+  if (typeof PHP_DIR != "undefined" && PHP_DIR) {
+    igbinary_apcu_ext_paths += ";" + PHP_DIR + "\\include\\ext\\apcu";
+    igbinary_apcu_paths += ";" + PHP_DIR + "\\include\\ext\\apcu";
+  }
+  if (CHECK_HEADER_ADD_INCLUDE("apc_serializer.h", "CFLAGS_IGBINARY", igbinary_apcu_paths)) {
     AC_DEFINE('HAVE_APCU_SUPPORT', 1, "Whether to enable apcu support");
-    if (!CHECK_HEADER_ADD_INCLUDE("apc_serializer.h", "CFLAGS_IGBINARY", "ext\\apcu")) {
+    if (!CHECK_HEADER_ADD_INCLUDE("apc_serializer.h", "CFLAGS_IGBINARY", igbinary_apcu_ext_paths)) {
       // Workaround to allow configuring and making apcu and igbinary at the same time.
       // If they aren't available in ext/apcu, expect them in ../pecl/apcu
       AC_DEFINE('HAVE_APCU_HEADERS_IN_PECL', 1, "Whether or not apcu headers exist only in pecl folder")
