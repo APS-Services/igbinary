@@ -36,7 +36,7 @@ jobs:
   release_windows_pie:
     if: ${{ github.event_name == 'release' }}
     needs: windows
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Upload artifacts to the release
         uses: php/php-windows-builder/release@v1
