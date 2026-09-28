@@ -27,22 +27,9 @@ jobs:
        include:
          # NOTE: If this is not quoted, the yaml parser will convert 7.0 to the number 7,
          # and the docker image `php:7` is the latest minor version of php 7.x (7.4).
-         - PHP_VERSION: '7.0'
-           PHP_VERSION_FULL: 7.0.33
-           DOCKER_ARCHITECTURE: i386
-         - PHP_VERSION: '7.1'
-           PHP_VERSION_FULL: 7.1.33
-         - PHP_VERSION: '7.2'
-           PHP_VERSION_FULL: 7.2.34
-         - PHP_VERSION: '7.3'
-           PHP_VERSION_FULL: 7.3.33
+         # Only the PHP versions APS ships igbinary for: 7.4 (freeclimber-gtk3 release/1.10.5) and 8.x.
          - PHP_VERSION: '7.4'
            PHP_VERSION_FULL: 7.4.33
-         - PHP_VERSION: '8.0'
-           PHP_VERSION_FULL: 8.0.30
-         - PHP_VERSION: '8.0'
-           PHP_VERSION_FULL: 8.0.30
-           DOCKER_ARCHITECTURE: i386
          - PHP_VERSION: '8.1'
            PHP_VERSION_FULL: 8.1.34
          - PHP_VERSION: '8.2'
@@ -66,18 +53,18 @@ jobs:
       - name: Build and test in docker
         run: bash ci/test_dockerized.sh ${{ matrix.PHP_VERSION }} ${{ matrix.PHP_VERSION_FULL }} ${{ matrix.DOCKER_ARCHITECTURE }}
 
-      # The php:7.3, 7.4 and 8.0 images are Debian 11 (bullseye), whose security updates are gone from
-      # deb.debian.org and not on archive.debian.org yet: the libc6-dev matching the image's libc6 cannot be
-      # installed, so valgrind cannot either. The build and tests above still run for them.
+      # The php:7.4 image is Debian 11 (bullseye), whose security updates are gone from deb.debian.org and
+      # not on archive.debian.org yet: the libc6-dev matching the image's libc6 cannot be installed, so
+      # valgrind cannot either. The build and tests above still run for it.
       - name: Build and test in docker again with valgrind
-        if: ${{ !contains(fromJSON('["7.3", "7.4", "8.0"]'), matrix.PHP_VERSION) }}
+        if: matrix.PHP_VERSION != '7.4'
         run: bash ci/test_dockerized_valgrind.sh ${{ matrix.PHP_VERSION }} ${{ matrix.PHP_VERSION_FULL }} ${{ matrix.DOCKER_ARCHITECTURE }}
 
   # Build and test on Windows
   windows:
     strategy:
       matrix:
-        php-version: ["7.2", "7.3", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
+        php-version: ["7.4", "8.1", "8.2", "8.3", "8.4", "8.5"]
         arch: [x64, x86]
         ts: [nts, ts]
     runs-on: windows-2022
