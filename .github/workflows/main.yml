@@ -66,7 +66,11 @@ jobs:
       - name: Build and test in docker
         run: bash ci/test_dockerized.sh ${{ matrix.PHP_VERSION }} ${{ matrix.PHP_VERSION_FULL }} ${{ matrix.DOCKER_ARCHITECTURE }}
 
+      # The php:7.3, 7.4 and 8.0 images are Debian 11 (bullseye), whose security updates are gone from
+      # deb.debian.org and not on archive.debian.org yet: the libc6-dev matching the image's libc6 cannot be
+      # installed, so valgrind cannot either. The build and tests above still run for them.
       - name: Build and test in docker again with valgrind
+        if: ${{ !contains(fromJSON('["7.3", "7.4", "8.0"]'), matrix.PHP_VERSION) }}
         run: bash ci/test_dockerized_valgrind.sh ${{ matrix.PHP_VERSION }} ${{ matrix.PHP_VERSION_FULL }} ${{ matrix.DOCKER_ARCHITECTURE }}
 
   # Build and test on Windows
